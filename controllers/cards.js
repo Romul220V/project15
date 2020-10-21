@@ -1,12 +1,15 @@
 const Card = require('../models/card');
+const SmthnWrong = require('../errors/SmthnWrong');
+const NotFoundError = require('../errors/NotFoundError');
+const AuthDenied = require('../errors/AuthDenied');
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => res.send({ data: cards }))
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch(() => next(new Error()));
 };
 
-module.exports.delCardId = (req, res) => {
+module.exports.delCardId = (req, res, next) => {
   const owner = req.user._id;
   Card.findOne({ _id: req.params.cardId, owner })
     .orFail(() => new Error('Not Found'))
@@ -19,22 +22,24 @@ module.exports.delCardId = (req, res) => {
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(400).send({ message: 'Нет пользователя с таким id' });
+        next(new SmthnWrong('Нет пользователя с таким id'));
       } else if (err.message === 'Not Found') {
-        res.status(404).send({ message: 'Объект не найден' });
-      } else if (err.message === 'Denied') { res.status(403).send({ message: 'у вас нет прав' }); } else { res.status(500).send({ message: 'Ошибка сервера' }); }
+        next(new NotFoundError('Объект не найден'));
+      } else if (err.message === 'Denied') {
+        next(new AuthDenied('у вас нет прав'));
+      } else next(new Error());
     });
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link, owner = req.user._id } = req.body;
   Card.create({ name, link, owner })
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400).send({ message: 'Переданы некорректные данные' });
+        next(new SmthnWrong('Переданы некорректные данные'));
       } else {
-        res.status(500).send({ message: 'Ошибка сервера' });
+        next(new NotFoundError('Ошибка сервера'));
       }
     });
 };
