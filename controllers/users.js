@@ -4,6 +4,7 @@ const User = require('../models/user');
 const SmthnWrong = require('../errors/SmthnWrong');
 const NotFoundError = require('../errors/NotFoundError');
 const AuthWrong = require('../errors/AuthWrong');
+const Conflict = require('../errors/Conflict');
 
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
@@ -25,7 +26,7 @@ module.exports.login = (req, res, next) => {
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
       res
-        .cookie('jwt', token, { httpOnly: true })
+        .cookie('jwt', token, { httpOnly: true, sameSite: true })
         .status(200).send({ message: 'logged in' });
     })
     .catch((err) => {
@@ -74,7 +75,7 @@ module.exports.createUser = (req, res, next) => {
       if (err.name === 'ValidationError') {
         next(new SmthnWrong('Переданы некорректные данные'));
       } else if (err.name === 'MongoError' && err.code === 11000) {
-        res.status(409).send({ message: 'Данный почтовый ящик уже зарегистрирован' });
+        next(new Conflict('Данный почтовый ящик уже зарегистрирован'));
       } else {
         next(new Error());
       }
