@@ -5,6 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
+const { celebrate, Joi } = require('celebrate');
 const { errors } = require('celebrate');
 const cards = require('./routes/cards');
 const users = require('./routes/users');
@@ -36,8 +37,28 @@ app.get('/crash-test', () => {
     throw new Error('Сервер сейчас упадёт');
   }, 0);
 });
-app.post('/signin', login);
-app.post('/signup', createUser);
+app.post('/signin', celebrate({
+  params: Joi.object().keys({
+    userId: Joi.string().hex(),
+  }),
+  headers: Joi.object().keys({
+    authorization: Joi.string().required(),
+  }).unknown(true),
+  body: Joi.object().keys({
+    userId: Joi.string().hex(),
+  }),
+}), login);
+app.post('/signup', celebrate({
+  params: Joi.object().keys({
+    userId: Joi.string().hex(),
+  }),
+  headers: Joi.object().keys({
+    authorization: Joi.string().required(),
+  }).unknown(true),
+  body: Joi.object().keys({
+    userId: Joi.string().hex(),
+  }),
+}), createUser);
 app.use(auth);
 app.use('/', users);
 app.use('/', cards);

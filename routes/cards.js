@@ -5,7 +5,7 @@ const { getCards, delCardId, createCard } = require('../controllers/cards');
 router.get('/cards', getCards);
 router.delete('/cards/:cardId', celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().alphanum().length(24),
+    cardId: Joi.string().hex(),
   }),
   headers: Joi.object().keys({
     authorization: Joi.string().required(),
