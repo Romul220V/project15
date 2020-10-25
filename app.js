@@ -25,7 +25,6 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useCreateIndex: true,
   useFindAndModify: false,
 });
-
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 100,
@@ -36,27 +35,22 @@ app.get('/crash-test', () => {
   setTimeout(() => {
     throw new Error('Сервер сейчас упадёт');
   }, 0);
+  console.log('falldown');
 });
 app.post('/signin', celebrate({
-  params: Joi.object().keys({
-    userId: Joi.string().hex(),
-  }),
-  headers: Joi.object().keys({
-    authorization: Joi.string().required(),
-  }).unknown(true),
   body: Joi.object().keys({
-    userId: Joi.string().hex(),
+    email: Joi.string().required().email({ tlds: { allow: false } }),
+    password: Joi.string().required(),
   }),
 }), login);
 app.post('/signup', celebrate({
-  params: Joi.object().keys({
-    userId: Joi.string().hex(),
-  }),
-  headers: Joi.object().keys({
-    authorization: Joi.string().required(),
-  }).unknown(true),
   body: Joi.object().keys({
-    userId: Joi.string().hex(),
+    email: Joi.string().required().email({ tlds: { allow: false } }),
+    password: Joi.string().required(),
+    name: Joi.string().required().min(2).max(30),
+    about: Joi.string().required().min(2).max(30),
+    // eslint-disable-next-line no-useless-escape
+    avatar: Joi.string().required().pattern(/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/),
   }),
 }), createUser);
 app.use(auth);

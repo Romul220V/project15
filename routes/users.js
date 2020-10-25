@@ -11,8 +11,5 @@ router.get('/users/:userId', celebrate({
   headers: Joi.object().keys({
     authorization: Joi.string().required(),
   }).unknown(true),
-  body: Joi.object().keys({
-    userId: Joi.string().hex(),
-  }),
 }), getUsersId);
 module.exports = router;
