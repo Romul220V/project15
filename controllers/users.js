@@ -3,10 +3,12 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const SmthnWrong = require('../errors/SmthnWrong');
 const NotFoundError = require('../errors/NotFoundError');
+const AuthWrong = require('../errors/AuthWrong');
+const Conflict = require('../errors/Conflict');
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-
+  const { NODE_ENV, JWT_SECRET } = process.env;
   User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
@@ -22,22 +24,20 @@ module.exports.login = (req, res) => {
       return User.findOne({ email });
     })
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
       res
-        .cookie('jwt', token, { httpOnly: true })
+        .cookie('jwt', token, { httpOnly: true, sameSite: true })
         .status(200).send({ message: 'logged in' });
     })
     .catch((err) => {
-      res
-        .status(401)
-        .send({ message: err.message });
+      next(new AuthWrong({ message: err.message }));
     });
 };
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch(() => next(new Error()));
 };
 
 module.exports.getUsersId = (req, res, next) => {
@@ -53,14 +53,14 @@ module.exports.getUsersId = (req, res, next) => {
     });
 };
 // eslint-disable-next-line consistent-return
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
     email, password, name, about, avatar,
   } = req.body;
   // eslint-disable-next-line no-useless-escape
   const newpass = password.replace(/\s/g, '');
   if (newpass.length === 0) {
-    return res.status(400).send({ message: 'Переданы некорректные данные' });
+    return next(new SmthnWrong('Переданы некорректные данные'));
   }
   bcrypt.hash(password, 10)
     .then((hash) => User.create({
@@ -73,9 +73,11 @@ module.exports.createUser = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400).send({ message: 'Переданы некорректные данные' });
-      } else if (err.name === 'MongoError' && err.code === 11000) { res.status(409).send({ message: 'Данный почтовый ящик уже зарегистрирован' }); } else {
-        res.status(500).send({ message: 'Ошибка сервера' });
+        next(new SmthnWrong('Переданы некорректные данные'));
+      } else if (err.name === 'MongoError' && err.code === 11000) {
+        next(new Conflict('Данный почтовый ящик уже зарегистрирован'));
+      } else {
+        next(new Error());
       }
     });
 };

@@ -22,11 +22,11 @@ const cardSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
-  likes: {
+  likes: [{
     type: mongoose.Schema.Types.ObjectId,
     // required: true,
-    default: 0,
-  },
+    default: [],
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
